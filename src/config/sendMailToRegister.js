@@ -20,7 +20,7 @@ const sendMailToRegister = (userMail, token) => {
     subject: 'Neureko - Confirma tu cuenta',
     html: `
       <h2>Bienvenido a Neureko 🧠</h2>
-      <p>Haz clic <a href="${process.env.FRONTEND_URL}/confirmar/${token}">aquí</a> para confirmar tu cuenta.</p>
+      <p>Haz clic <a href="${process.env.FRONTEND_URL}confirmar/${token}">aquí</a> para confirmar tu cuenta.</p>
       <hr />
       <footer>¡Gracias por unirte a nuestra plataforma de gestión emocional!</footer>
     `
@@ -45,7 +45,7 @@ const sendMailToRecoveryPassword = async (userMail, token) => {
     subject: 'Neureko - Recupera tu contraseña',
     html: `
       <h2>Recuperación de contraseña</h2>
-      <p>Haz clic <a href="${process.env.FRONTEND_URL}/recuperarpassword/${token}">aquí</a> para crear una nueva contraseña.</p>
+      <p>Haz clic <a href="${process.env.FRONTEND_URL}recuperarpassword/${token}">aquí</a> para crear una nueva contraseña.</p>
       <hr />
       <footer>Si no solicitaste este correo, ignóralo. Tu salud emocional está en buenas manos con Neureko 🧠</footer>
     `
