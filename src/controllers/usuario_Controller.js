@@ -49,22 +49,38 @@ const confirmarCuenta = async (req, res) => {
 
 // Login
 const login = async (req, res) => {
-  const { correo, contrasena } = req.body
+  const { correo, contrasena } = req.body;
 
-  const usuario = await User.findOne({ correo })
-  if (!usuario)
-    return res.status(404).json({ msg: 'Usuario no encontrado' })
+  if (Object.values(req.body).includes("")) {
+    return res.status(400).json({ msg: "Todos los campos son obligatorios" });
+  }
 
-  const esValida = await bcrypt.compare(contrasena, usuario.contrasena)
-  if (!esValida)
-    return res.status(400).json({ msg: 'Contraseña incorrecta' })
+  const usuario = await User.findOne({ correo }).select("-__v -token -updatedAt -createdAt");
 
-  if (!usuario.confirmEmail)
-    return res.status(403).json({ msg: 'Debes confirmar tu correo antes de iniciar sesión' })
+  if (!usuario) {
+    return res.status(404).json({ msg: "El usuario no está registrado" });
+  }
 
-  const token = generateToken(usuario)
-  res.status(200).json({ token })
-}
+  if (!usuario.confirmEmail) {
+    return res.status(403).json({ msg: "Debes confirmar tu cuenta antes de iniciar sesión" });
+  }
+
+  const passwordValido = await usuario.compararContrasena(contrasena);
+  if (!passwordValido) {
+    return res.status(401).json({ msg: "La contraseña no es válida" });
+  }
+
+  const { nombre, telefono, rol, _id } = usuario;
+
+  return res.status(200).json({
+    rol,
+    nombre,
+    telefono,
+    correo: usuario.correo,
+    _id
+  });
+};
+
 
 // Recuperar contraseña
 const recuperarPassword = async (req, res) => {
@@ -112,6 +128,7 @@ const crearNuevoPassword = async (req, res) => {
 
   res.status(200).json({ msg: 'Contraseña actualizada correctamente. Ya puedes iniciar sesión.' })
 }
+
 
 export {
   register,
