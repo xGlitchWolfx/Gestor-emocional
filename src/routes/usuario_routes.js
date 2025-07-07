@@ -5,19 +5,28 @@ import {
   confirmarCuenta,
   recuperarPassword,
   comprobarTokenPassword,
-  crearNuevoPassword
+  crearNuevoPassword,
+  perfil,
+  actualizarPerfil,
+  actualizarPassword
 } from '../controllers/usuario_Controller.js'
+
+import { verificarTokenJWT } from '../middlewares/JWT.js'
 
 const router = Router()
 
-// Autenticación y registro
-router.post('/register', register) // Registrar nuevo usuario
-router.post('/login', login) // Iniciar sesión
-router.get('/confirmar/:token', confirmarCuenta) // Confirmar cuenta por token
+router.post('/register', register)
+router.post('/login', login)
+router.get('/confirmar/:token', confirmarCuenta)
 
-// Recuperación de contraseña
-router.post('/recuperar-password', recuperarPassword) // Solicitar recuperación (envía correo)
-router.get('/recuperar-password/:token', comprobarTokenPassword) // Comprobar token recibido
-router.post('/recuperar-password/:token', crearNuevoPassword) // Crear nueva contraseña con token
+router.post('/recuperar-password', recuperarPassword)
+router.get('/recuperar-password/:token', comprobarTokenPassword)
+router.post('/recuperar-password/:token', crearNuevoPassword)
+
+router.get('/perfil', verificarTokenJWT, perfil)
+router.put('/perfil', verificarTokenJWT, actualizarPerfil)
+
+router.put('/actualizar-password', verificarTokenJWT, actualizarPassword)
+
 
 export default router

@@ -2,8 +2,10 @@ import User from '../models/User.js'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { sendMailToRegister, sendMailToRecoveryPassword } from '../config/sendMailToRegister.js'
+import { crearTokenJWT } from '../middlewares/JWT.js'
+import mongoose from 'mongoose'
 
-// Generar token JWT
+// Generar token de confirmación de cuenta
 const generateToken = (user) => {
   return jwt.sign({ id: user._id, role: user.rol }, process.env.JWT_SECRET, { expiresIn: '1d' })
 }
@@ -47,40 +49,40 @@ const confirmarCuenta = async (req, res) => {
   res.status(200).json({ msg: 'Cuenta confirmada correctamente. Ya puedes iniciar sesión.' })
 }
 
-// Login
+// Iniciar sesión
 const login = async (req, res) => {
-  const { correo, contrasena } = req.body;
+  const { correo, contrasena } = req.body
 
-  if (Object.values(req.body).includes("")) {
-    return res.status(400).json({ msg: "Todos los campos son obligatorios" });
+  if (!correo || !contrasena) {
+    return res.status(400).json({ msg: "Todos los campos son obligatorios" })
   }
 
-  const usuario = await User.findOne({ correo }).select("-__v -token -updatedAt -createdAt");
+  const usuarioBDD = await User.findOne({ correo }).select("-__v -updatedAt -createdAt")
 
-  if (!usuario) {
-    return res.status(404).json({ msg: "El usuario no está registrado" });
+  if (!usuarioBDD) {
+    return res.status(404).json({ msg: "El usuario no se encuentra registrado" })
   }
 
-  if (!usuario.confirmEmail) {
-    return res.status(403).json({ msg: "Debes confirmar tu cuenta antes de iniciar sesión" });
+  if (!usuarioBDD.confirmEmail) {
+    return res.status(403).json({ msg: "Debes verificar tu cuenta" })
   }
 
-  const passwordValido = await usuario.compararContrasena(contrasena);
-  if (!passwordValido) {
-    return res.status(401).json({ msg: "La contraseña no es válida" });
+  const verificarPassword = await usuarioBDD.compararContrasena(contrasena)
+
+  if (!verificarPassword) {
+    return res.status(401).json({ msg: "La contraseña no es correcta" })
   }
 
-  const { nombre, telefono, rol, _id } = usuario;
+  const token = crearTokenJWT(usuarioBDD._id, usuarioBDD.rol)
 
-  return res.status(200).json({
-    rol,
-    nombre,
-    telefono,
-    correo: usuario.correo,
-    _id
-  });
-};
-
+  res.status(200).json({
+    token,
+    nombre: usuarioBDD.nombre,
+    correo: usuarioBDD.correo,
+    rol: usuarioBDD.rol,
+    _id: usuarioBDD._id
+  })
+}
 
 // Recuperar contraseña
 const recuperarPassword = async (req, res) => {
@@ -129,12 +131,72 @@ const crearNuevoPassword = async (req, res) => {
   res.status(200).json({ msg: 'Contraseña actualizada correctamente. Ya puedes iniciar sesión.' })
 }
 
+// Obtener perfil
+const perfil = (req, res) => {
+  if (!req.usuarioBDD) {
+    return res.status(401).json({ msg: "No autorizado" })
+  }
+
+  res.status(200).json(req.usuarioBDD)
+}
+
+// Actualizar perfil
+const actualizarPerfil = async (req, res) => {
+  // Usa el usuario autenticado
+  const usuarioBDD = req.usuarioBDD
+  const { nombre, correo, telefono } = req.body
+
+  if (!usuarioBDD)
+    return res.status(401).json({ msg: "No autorizado" })
+
+  if (Object.values(req.body).includes(""))
+    return res.status(400).json({ msg: "Todos los campos son obligatorios" })
+
+  if (usuarioBDD.correo !== correo) {
+    const correoExistente = await User.findOne({ correo })
+    if (correoExistente) {
+      return res.status(400).json({ msg: "El correo ya está registrado con otro usuario" })
+    }
+  }
+
+  usuarioBDD.nombre = nombre ?? usuarioBDD.nombre
+  usuarioBDD.correo = correo ?? usuarioBDD.correo
+  usuarioBDD.telefono = telefono ?? usuarioBDD.telefono
+
+  await usuarioBDD.save()
+
+  res.status(200).json(usuarioBDD)
+}
+
+// Actualizar contraseña desde el perfil
+const actualizarPassword = async (req, res) => {
+  const { passwordactual, passwordnuevo } = req.body
+  const usuarioBDD = req.usuarioBDD
+
+  if (!usuarioBDD) return res.status(401).json({ msg: "No autorizado" })
+
+  if (!passwordactual || !passwordnuevo)
+    return res.status(400).json({ msg: "Debes llenar todos los campos" })
+
+  const passwordValido = await usuarioBDD.compararContrasena(passwordactual)
+
+  if (!passwordValido)
+    return res.status(400).json({ msg: "La contraseña actual no es correcta" })
+
+  usuarioBDD.contrasena = await usuarioBDD.encriptarContrasena(passwordnuevo)
+  await usuarioBDD.save()
+
+  res.status(200).json({ msg: "Contraseña actualizada correctamente" })
+}
 
 export {
   register,
-  confirmarCuenta,
   login,
+  confirmarCuenta,
   recuperarPassword,
   comprobarTokenPassword,
-  crearNuevoPassword
+  crearNuevoPassword,
+  perfil,
+  actualizarPerfil,
+  actualizarPassword
 }
