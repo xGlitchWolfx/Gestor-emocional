@@ -1,14 +1,9 @@
 import User from '../models/User.js'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
+import Empresa from '../models/Empresa.js'
 import { sendMailToRegister, sendMailToRecoveryPassword } from '../config/sendMailToRegister.js'
 import { crearTokenJWT } from '../middlewares/JWT.js'
-import mongoose from 'mongoose'
-
-// Generar token de confirmación de cuenta
-const generateToken = (user) => {
-  return jwt.sign({ id: user._id, role: user.rol }, process.env.JWT_SECRET, { expiresIn: '1d' })
-}
 
 // Registro de usuario
 const register = async (req, res) => {
@@ -53,27 +48,24 @@ const confirmarCuenta = async (req, res) => {
 const login = async (req, res) => {
   const { correo, contrasena } = req.body
 
-  if (!correo || !contrasena) {
+  if (!correo || !contrasena)
     return res.status(400).json({ msg: "Todos los campos son obligatorios" })
-  }
 
   const usuarioBDD = await User.findOne({ correo }).select("-__v -updatedAt -createdAt")
 
-  if (!usuarioBDD) {
+  if (!usuarioBDD)
     return res.status(404).json({ msg: "El usuario no se encuentra registrado" })
-  }
 
-  if (!usuarioBDD.confirmEmail) {
+  if (!usuarioBDD.confirmEmail)
     return res.status(403).json({ msg: "Debes verificar tu cuenta" })
-  }
 
   const verificarPassword = await usuarioBDD.compararContrasena(contrasena)
 
-  if (!verificarPassword) {
+  if (!verificarPassword)
     return res.status(401).json({ msg: "La contraseña no es correcta" })
-  }
 
-  const token = crearTokenJWT(usuarioBDD._id, usuarioBDD.rol)
+  // 🟢 Token con empresaId incluido si aplica
+  const token = await crearTokenJWT(usuarioBDD._id, usuarioBDD.rol)
 
   res.status(200).json({
     token,
@@ -142,7 +134,6 @@ const perfil = (req, res) => {
 
 // Actualizar perfil
 const actualizarPerfil = async (req, res) => {
-  // Usa el usuario autenticado
   const usuarioBDD = req.usuarioBDD
   const { nombre, correo, telefono } = req.body
 

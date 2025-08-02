@@ -1,29 +1,59 @@
 import jwt from "jsonwebtoken"
 import User from "../models/User.js"
+import Empresa from "../models/Empresa.js"
 
-const crearTokenJWT = (id, rol) => {
-  return jwt.sign({ id, rol }, process.env.JWT_SECRET, { expiresIn: "1d" });
-};
+// Crear token JWT con empresaId si aplica
+const crearTokenJWT = async (id, rol) => {
+  let empresaId = null
 
+  // Lógica mejorada para jefes con múltiples empresas
+  if (rol === 'jefe') {
+    // Buscamos TODAS las empresas del jefe
+    const empresas = await Empresa.find({ creadoPor: id }).select('_id')
+    // Si tiene EXACTAMENTE una empresa, la seleccionamos por defecto en el token
+    if (empresas.length === 1) {
+      empresaId = empresas[0]._id
+    }
+    // Si tiene 0 o más de 1, empresaId se queda en null. El frontend deberá pedirle que seleccione una.
+  }
+
+  if (rol === 'empleado') {
+    const empresa = await Empresa.findOne({ empleados: id })
+    if (empresa) empresaId = empresa._id
+  }
+
+  const payload = { id, rol, empresaId }
+
+  return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "1d" })
+}
+
+// Verificar token y adjuntar usuario al request
 const verificarTokenJWT = async (req, res, next) => {
-  const { authorization } = req.headers;
+  const { authorization } = req.headers
 
   if (!authorization)
-    return res.status(401).json({ msg: "Acceso denegado: token no proporcionado o inválido" });
+    return res.status(401).json({ msg: "Acceso denegado: token no proporcionado o inválido" })
 
   try {
-    const token = authorization.split(" ")[1];
-    const { id, rol } = jwt.verify(token, process.env.JWT_SECRET);
+    const token = authorization.split(" ")[1]
+    const { id, rol, empresaId } = jwt.verify(token, process.env.JWT_SECRET)
 
-    req.usuarioBDD = await User.findById(id); // No excluyas la contraseña
+    const usuario = await User.findById(id)
 
-    next();
+    if (!usuario)
+      return res.status(404).json({ msg: "Usuario no encontrado" })
+
+    req.usuarioBDD = usuario
+    req.rol = rol
+    req.empresaId = empresaId
+
+    next()
   } catch (error) {
-    return res.status(401).json({ msg: "Token inválido o expirado" });
+    return res.status(401).json({ msg: "Token inválido o expirado" })
   }
-};
+}
 
 export {
   crearTokenJWT,
   verificarTokenJWT
-};
+}
