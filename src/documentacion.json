@@ -1,0 +1,261 @@
+{
+  "baseUrl": "https://gestor-emocional.onrender.com/api",
+  "endpoints": {
+    "Usuarios": [
+      {
+        "name": "1. Registrar usuario",
+        "method": "POST",
+        "path": "/auth/register",
+        "description": "Registra un nuevo usuario en el sistema.",
+        "bodyParams": ["nombre", "correo", "contrasena"]
+      },
+      {
+        "name": "2. Confirmar usuario",
+        "method": "GET",
+        "path": "/auth/confirmar/:token",
+        "description": "Confirma la cuenta de usuario mediante el token enviado por correo.",
+        "urlParams": ["token"]
+      },
+      {
+        "name": "3. Login",
+        "method": "POST",
+        "path": "/auth/login",
+        "description": "Inicia sesión y devuelve un token JWT.",
+        "bodyParams": ["correo", "contrasena"]
+      },
+      {
+        "name": "4. Recuperar contraseña",
+        "method": "POST",
+        "path": "/auth/recuperar-password",
+        "description": "Envía un correo para recuperar la contraseña.",
+        "bodyParams": ["correo"]
+      },
+      {
+        "name": "5. Comprobar token recuperación",
+        "method": "GET",
+        "path": "/auth/recuperar-password/:token",
+        "description": "Verifica si el token de recuperación es válido.",
+        "urlParams": ["token"]
+      },
+      {
+        "name": "6. Crear nueva contraseña",
+        "method": "POST",
+        "path": "/auth/recuperar-password/:token",
+        "description": "Permite establecer una nueva contraseña usando el token.",
+        "urlParams": ["token"],
+        "bodyParams": ["password", "confirmpassword"]
+      },
+      {
+        "name": "7. Obtener perfil",
+        "method": "GET",
+        "path": "/auth/perfil",
+        "description": "Devuelve los datos del perfil del usuario autenticado.",
+        "authRequired": true
+      },
+      {
+        "name": "8. Actualizar perfil",
+        "method": "PUT",
+        "path": "/auth/perfil",
+        "description": "Actualiza los datos del perfil del usuario.",
+        "authRequired": true,
+        "bodyParams": ["nombre", "correo", "telefono"]
+      },
+      {
+        "name": "9. Actualizar contraseña",
+        "method": "PUT",
+        "path": "/auth/actualizar-password",
+        "description": "Actualiza la contraseña del usuario autenticado.",
+        "authRequired": true,
+        "bodyParams": ["passwordactual", "passwordnuevo"]
+      },
+      {
+        "name": "10. Analizar estado de ánimo",
+        "method": "POST",
+        "path": "/auth/analizar-animo",
+        "description": "Analiza el estado de ánimo del usuario usando IA.",
+        "authRequired": true,
+        "bodyParams": ["texto"]
+      }
+    ],
+    "Empresas": [
+      {
+        "name": "1. Crear empresa",
+        "method": "POST",
+        "path": "/empresa/crear",
+        "description": "Crea una nueva empresa y asigna al usuario como jefe.",
+        "authRequired": true,
+        "bodyParams": ["nombre", "descripcion", "direccion", "telefono"]
+      },
+      {
+        "name": "2. Ver empleados",
+        "method": "GET",
+        "path": "/empresa/empleados",
+        "description": "Devuelve la lista de empleados de la empresa seleccionada.",
+        "authRequired": true
+      },
+      {
+        "name": "3. Unirse a empresa",
+        "method": "POST",
+        "path": "/empresa/unirse",
+        "description": "Permite a un usuario unirse a una empresa usando un token de invitación.",
+        "authRequired": true,
+        "bodyParams": ["token"]
+      },
+      {
+        "name": "4. Actualizar empresa",
+        "method": "PUT",
+        "path": "/empresa/actualizar",
+        "description": "Actualiza los datos de la empresa seleccionada.",
+        "authRequired": true,
+        "bodyParams": ["nombre", "descripcion", "direccion", "telefono"]
+      },
+      {
+        "name": "5. Ver mi empresa",
+        "method": "GET",
+        "path": "/empresa/mi-empresa",
+        "description": "Devuelve los datos de la empresa asociada al usuario.",
+        "authRequired": true
+      },
+      {
+        "name": "6. Listar mis empresas",
+        "method": "GET",
+        "path": "/empresa/mis-empresas",
+        "description": "Lista todas las empresas creadas por el usuario jefe.",
+        "authRequired": true
+      },
+      {
+        "name": "7. Seleccionar empresa",
+        "method": "POST",
+        "path": "/empresa/seleccionar/:id",
+        "description": "Selecciona una empresa para administrar y devuelve un nuevo token.",
+        "authRequired": true,
+        "urlParams": ["id"]
+      },
+      {
+        "name": "8. Eliminar empresa",
+        "method": "DELETE",
+        "path": "/empresa/eliminar/:id",
+        "description": "Elimina una empresa y desvincula a los empleados.",
+        "authRequired": true,
+        "urlParams": ["id"]
+      },
+      {
+        "name": "9. Generar código de invitación",
+        "method": "PUT",
+        "path": "/empresa/generar-invitacion",
+        "description": "Genera o regenera el código de invitación para la empresa seleccionada.",
+        "authRequired": true
+      },
+      {
+        "name": "10. Expulsar empleado",
+        "method": "POST",
+        "path": "/empresa/expulsar/:id",
+        "description": "Expulsa a un empleado de la empresa.",
+        "authRequired": true,
+        "urlParams": ["id"]
+      }
+    ],
+    "Tareas": [
+      {
+        "name": "1. Crear tarea",
+        "method": "POST",
+        "path": "/tareas/crear",
+        "description": "Crea una nueva tarea para un empleado.",
+        "authRequired": true,
+        "bodyParams": ["nombre", "descripcion", "dificultad", "asignadoA", "recompensaXP", "recompensaMonedas", "fechaLimite"]
+      },
+      {
+        "name": "2. Editar tarea",
+        "method": "PUT",
+        "path": "/tareas/:id",
+        "description": "Edita los datos de una tarea existente.",
+        "authRequired": true,
+        "urlParams": ["id"],
+        "bodyParams": ["nombre", "descripcion", "dificultad", "recompensaXP", "recompensaMonedas", "fechaLimite"]
+      },
+      {
+        "name": "3. Eliminar tarea",
+        "method": "DELETE",
+        "path": "/tareas/:id",
+        "description": "Elimina una tarea.",
+        "authRequired": true,
+        "urlParams": ["id"]
+      },
+      {
+        "name": "4. Revisar tarea",
+        "method": "POST",
+        "path": "/tareas/:id/revisar",
+        "description": "Revisa una tarea completada por un empleado.",
+        "authRequired": true,
+        "urlParams": ["id"],
+        "bodyParams": ["aprobado", "comentarioRechazo"]
+      },
+      {
+        "name": "5. Listar tareas para revisión",
+        "method": "GET",
+        "path": "/tareas/para-revision",
+        "description": "Lista las tareas pendientes de revisión por el jefe.",
+        "authRequired": true
+      },
+      {
+        "name": "6. Listar tareas de empleado",
+        "method": "GET",
+        "path": "/tareas/empleado/:id",
+        "description": "Lista todas las tareas asignadas a un empleado.",
+        "authRequired": true,
+        "urlParams": ["id"]
+      },
+      {
+        "name": "7. Listar mis tareas",
+        "method": "GET",
+        "path": "/tareas/mis-tareas",
+        "description": "Lista todas las tareas asignadas al usuario autenticado.",
+        "authRequired": true
+      },
+      {
+        "name": "8. Recomendar tareas",
+        "method": "POST",
+        "path": "/tareas/recomendar",
+        "description": "Recomienda tareas según la emoción detectada.",
+        "authRequired": true,
+        "bodyParams": ["emocion"]
+      },
+      {
+        "name": "9. Completar tarea",
+        "method": "POST",
+        "path": "/tareas/:id/completar",
+        "description": "Permite a un empleado completar una tarea y subir informe/imagen.",
+        "authRequired": true,
+        "urlParams": ["id"],
+        "bodyParams": ["texto", "archivo (imagen)"]
+      }
+    ],
+    "Pagos": [
+      {
+        "name": "1. Crear intento de pago",
+        "method": "POST",
+        "path": "/pagos/crear-intento-pago",
+        "description": "Crea un intento de pago con Stripe y devuelve el clientSecret.",
+        "authRequired": true,
+        "bodyParams": ["amount"]
+      }
+    ],
+    "Chat": [
+      {
+        "name": "1. Obtener chat grupal",
+        "method": "GET",
+        "path": "/chat/grupal",
+        "description": "Obtiene los mensajes del chat grupal de la empresa.",
+        "authRequired": true
+      },
+      {
+        "name": "2. Obtener chat privado",
+        "method": "GET",
+        "path": "/chat/privado/:id",
+        "description": "Obtiene los mensajes privados entre el usuario y otro usuario.",
+        "authRequired": true,
+        "urlParams": ["id"]
+      }
+    ]
+  }
+}

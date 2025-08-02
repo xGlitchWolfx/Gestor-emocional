@@ -27,6 +27,14 @@ const userSchema = new Schema({
     enum: ['usuario', 'jefe', 'empleado'],
     default: 'usuario'
   },
+  xp: {
+    type: Number,
+    default: 0
+  },
+  monedas: {
+    type: Number,
+    default: 0
+  },
   status: {
     type: Boolean,
     default: true
@@ -52,18 +60,15 @@ const userSchema = new Schema({
   timestamps: true
 })
 
-// Método para cifrar contraseña
 userSchema.methods.encriptarContrasena = async function (contrasena) {
   const salt = await bcrypt.genSalt(10)
   return await bcrypt.hash(contrasena, salt)
 }
 
-// Método para verificar contraseña
 userSchema.methods.compararContrasena = async function (contrasena) {
   return await bcrypt.compare(contrasena, this.contrasena)
 }
 
-// Método para crear token de confirmación
 userSchema.methods.generarToken = function () {
   this.token = Math.random().toString(36).slice(2)
   return this.token

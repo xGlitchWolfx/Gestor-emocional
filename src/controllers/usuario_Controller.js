@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken'
 import Empresa from '../models/Empresa.js'
 import { sendMailToRegister, sendMailToRecoveryPassword } from '../config/sendMailToRegister.js'
 import { crearTokenJWT } from '../middlewares/JWT.js'
+import { HfInference } from '@huggingface/inference'
 
 // Registro de usuario
 const register = async (req, res) => {
@@ -64,7 +65,7 @@ const login = async (req, res) => {
   if (!verificarPassword)
     return res.status(401).json({ msg: "La contraseña no es correcta" })
 
-  // 🟢 Token con empresaId incluido si aplica
+  //Token con empresaId incluido si aplica
   const token = await crearTokenJWT(usuarioBDD._id, usuarioBDD.rol)
 
   res.status(200).json({
@@ -125,59 +126,86 @@ const crearNuevoPassword = async (req, res) => {
 
 // Obtener perfil
 const perfil = (req, res) => {
-  if (!req.usuarioBDD) {
-    return res.status(401).json({ msg: "No autorizado" })
-  }
-
-  res.status(200).json(req.usuarioBDD)
+  res.status(200).json(req.user);
 }
 
 // Actualizar perfil
 const actualizarPerfil = async (req, res) => {
-  const usuarioBDD = req.usuarioBDD
-  const { nombre, correo, telefono } = req.body
+  try {
+    const usuarioBDD = req.user;
+    const { nombre, correo, telefono } = req.body;
 
-  if (!usuarioBDD)
-    return res.status(401).json({ msg: "No autorizado" })
-
-  if (Object.values(req.body).includes(""))
-    return res.status(400).json({ msg: "Todos los campos son obligatorios" })
-
-  if (usuarioBDD.correo !== correo) {
-    const correoExistente = await User.findOne({ correo })
-    if (correoExistente) {
-      return res.status(400).json({ msg: "El correo ya está registrado con otro usuario" })
+    // Validación simple para evitar campos vacíos si se envían
+    if (Object.values(req.body).some(value => value === "")) {
+      return res.status(400).json({ msg: "No se permiten campos vacíos al actualizar." });
     }
+
+    if (correo && usuarioBDD.correo !== correo) {
+      const correoExistente = await User.findOne({ correo });
+      if (correoExistente) {
+        return res.status(400).json({ msg: "El correo ya está registrado con otro usuario" });
+      }
+    }
+
+    usuarioBDD.nombre = nombre ?? usuarioBDD.nombre;
+    usuarioBDD.correo = correo ?? usuarioBDD.correo;
+    usuarioBDD.telefono = telefono ?? usuarioBDD.telefono;
+
+    const usuarioActualizado = await usuarioBDD.save();
+    res.status(200).json(usuarioActualizado);
+  } catch (error) {
+    console.error('Error al actualizar perfil:', error);
+    res.status(500).json({ msg: 'Hubo un error en el servidor.' });
   }
-
-  usuarioBDD.nombre = nombre ?? usuarioBDD.nombre
-  usuarioBDD.correo = correo ?? usuarioBDD.correo
-  usuarioBDD.telefono = telefono ?? usuarioBDD.telefono
-
-  await usuarioBDD.save()
-
-  res.status(200).json(usuarioBDD)
 }
 
 // Actualizar contraseña desde el perfil
 const actualizarPassword = async (req, res) => {
-  const { passwordactual, passwordnuevo } = req.body
-  const usuarioBDD = req.usuarioBDD
+  try {
+    const { passwordactual, passwordnuevo } = req.body;
+    const usuarioBDD = req.user;
 
-  if (!usuarioBDD) return res.status(401).json({ msg: "No autorizado" })
+    if (!passwordactual || !passwordnuevo)
+      return res.status(400).json({ msg: "Debes llenar todos los campos" });
 
-  if (!passwordactual || !passwordnuevo)
-    return res.status(400).json({ msg: "Debes llenar todos los campos" })
+    const passwordValido = await usuarioBDD.compararContrasena(passwordactual);
 
-  const passwordValido = await usuarioBDD.compararContrasena(passwordactual)
+    if (!passwordValido)
+      return res.status(400).json({ msg: "La contraseña actual no es correcta" });
 
-  if (!passwordValido)
-    return res.status(400).json({ msg: "La contraseña actual no es correcta" })
+    usuarioBDD.contrasena = await usuarioBDD.encriptarContrasena(passwordnuevo);
+    await usuarioBDD.save();
 
-  usuarioBDD.contrasena = await usuarioBDD.encriptarContrasena(passwordnuevo)
-  await usuarioBDD.save()
+    res.status(200).json({ msg: "Contraseña actualizada correctamente" });
+  } catch (error) {
+    console.error('Error al actualizar contraseña:', error);
+    res.status(500).json({ msg: 'Hubo un error en el servidor.' });
+  }
+}
 
-  res.status(200).json({ msg: "Contraseña actualizada correctamente" })
+// Analizar estado de ánimo con IA
+const analizarEstadoAnimo = async (req, res) => {
+  const { texto } = req.body
+
+  if (!texto) {
+    return res.status(400).json({ msg: 'El texto es obligatorio para el análisis.' })
+  }
+
+  try {
+    const hf = new HfInference(process.env.HUGGING_FACE_API_KEY)
+
+    const emociones = await hf.textClassification({
+      model: 'bertin-project/bertin-roberta-base-emotions',
+      inputs: texto
+    })
+
+    // Devuelve un array de objetos: [{ label: 'sadness', score: 0.9 }, { label: 'joy', score: 0.1 }, ...]
+    res.status(200).json(emociones)
+
+  } catch (error) {
+    console.error('Error al analizar estado de ánimo con Hugging Face:', error)
+    res.status(500).json({ msg: 'No se pudo realizar el análisis en este momento.' })
+  }
 }
 
 export {
@@ -189,5 +217,6 @@ export {
   crearNuevoPassword,
   perfil,
   actualizarPerfil,
-  actualizarPassword
+  actualizarPassword,
+  analizarEstadoAnimo
 }

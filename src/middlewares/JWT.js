@@ -6,15 +6,11 @@ import Empresa from "../models/Empresa.js"
 const crearTokenJWT = async (id, rol) => {
   let empresaId = null
 
-  // Lógica mejorada para jefes con múltiples empresas
   if (rol === 'jefe') {
-    // Buscamos TODAS las empresas del jefe
     const empresas = await Empresa.find({ creadoPor: id }).select('_id')
-    // Si tiene EXACTAMENTE una empresa, la seleccionamos por defecto en el token
     if (empresas.length === 1) {
       empresaId = empresas[0]._id
     }
-    // Si tiene 0 o más de 1, empresaId se queda en null. El frontend deberá pedirle que seleccione una.
   }
 
   if (rol === 'empleado') {
@@ -27,7 +23,6 @@ const crearTokenJWT = async (id, rol) => {
   return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "1d" })
 }
 
-// Verificar token y adjuntar usuario al request
 const verificarTokenJWT = async (req, res, next) => {
   const { authorization } = req.headers
 
