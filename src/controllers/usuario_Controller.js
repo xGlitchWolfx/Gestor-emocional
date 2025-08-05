@@ -1,3 +1,52 @@
+// Generar imagen desde texto con IA
+const textoAImagen = async (req, res) => {
+  const { prompt } = req.body
+
+  if (!prompt || !prompt.trim()) {
+    return res.status(400).json({ 
+      msg: 'El prompt es requerido para generar la imagen' 
+    })
+  }
+
+  try {
+    const hf = new HfInference(process.env.HUGGING_FACE_API_KEY)
+
+    const imageBlob = await hf.textToImage({
+      model: 'black-forest-labs/FLUX.1-Krea-dev',
+      inputs: prompt.trim()
+    })
+
+    const arrayBuffer = await imageBlob.arrayBuffer()
+    const buffer = Buffer.from(arrayBuffer)
+    const base64Image = buffer.toString('base64')
+    const imageUrl = `data:image/png;base64,${base64Image}`
+
+    res.status(200).json({
+      success: true,
+      url: imageUrl,
+      prompt: prompt.trim()
+    })
+
+  } catch (error) {
+    console.error('Error generando imagen:', error)
+    
+    if (error.message?.includes('Rate limit')) {
+      return res.status(429).json({ 
+        msg: 'Límite de peticiones alcanzado. Intenta más tarde.' 
+      })
+    }
+    
+    if (error.message?.includes('Model is actualmente loading')) {
+      return res.status(503).json({ 
+        msg: 'El modelo se está cargando. Intenta en unos segundos.' 
+      })
+    }
+
+    res.status(500).json({ 
+      msg: 'Error interno del servidor al generar la imagen' 
+    })
+  }
+}
 import User from '../models/User.js'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
@@ -195,7 +244,7 @@ const analizarEstadoAnimo = async (req, res) => {
     const hf = new HfInference(process.env.HUGGING_FACE_API_KEY)
 
     const emociones = await hf.textClassification({
-      model: 'bertin-project/bertin-roberta-base-emotions',
+      model: 'SamLowe/roberta-base-go_emotions',
       inputs: texto
     })
 
@@ -205,6 +254,38 @@ const analizarEstadoAnimo = async (req, res) => {
   } catch (error) {
     console.error('Error al analizar estado de ánimo con Hugging Face:', error)
     res.status(500).json({ msg: 'No se pudo realizar el análisis en este momento.' })
+  }
+}
+
+
+// Callback para login con redes sociales - CORREGIDO
+const socialLoginCallback = async (req, res) => {
+  try {
+    const usuarioBDD = req.user
+
+    if (!usuarioBDD) {
+      console.log('No hay usuario en req.user - Redirigiendo con error');
+      return res.redirect(`${process.env.FRONTEND_URL}/login?error=authentication_failed`);
+    }
+
+    console.log('Usuario autenticado con Google:', {
+      id: usuarioBDD._id,
+      nombre: usuarioBDD.nombre,
+      correo: usuarioBDD.correo,
+      rol: usuarioBDD.rol
+    });
+
+    // Creamos el token JWT para el usuario usando tu función existente
+    const token = await crearTokenJWT(usuarioBDD._id, usuarioBDD.rol)
+
+    console.log('Token JWT creado, redirigiendo al frontend...');
+
+    // IMPORTANTE: Redirigir al frontend con el token y rol como parámetros
+    res.redirect(`${process.env.FRONTEND_URL}/login?token=${token}&rol=${usuarioBDD.rol}`);
+    
+  } catch (error) {
+    console.error('Error en socialLoginCallback:', error);
+    res.redirect(`${process.env.FRONTEND_URL}/login?error=server_error`);
   }
 }
 
@@ -218,5 +299,7 @@ export {
   perfil,
   actualizarPerfil,
   actualizarPassword,
-  analizarEstadoAnimo
+  analizarEstadoAnimo,
+  socialLoginCallback,
+  textoAImagen
 }

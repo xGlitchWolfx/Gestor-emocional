@@ -15,7 +15,7 @@ const userSchema = new Schema({
   },
   contrasena: {
     type: String,
-    required: true
+    required: false // No es requerida para usuarios de redes sociales
   },
   telefono: {
     type: String,
@@ -55,6 +55,17 @@ const userSchema = new Schema({
     type: Date,
     default: null
   },
+  // --- Campos para Autenticación Social ---
+  googleId: {
+    type: String,
+    unique: true,
+    sparse: true // Permite múltiples documentos con valor null
+  },
+  facebookId: {
+    type: String,
+    unique: true,
+    sparse: true // Permite múltiples documentos con valor null
+  }
 
 }, {
   timestamps: true
